@@ -88,25 +88,47 @@ func TestClassicBitmaps(t *testing.T) {
 			t.Fatalf("%s collapsed %q", pt, flat)
 		}
 	}
-	king := strings.Join(classicMask[chess.King], "\n")
-	if !strings.HasPrefix(classicMask[chess.King][0], ".......##") {
-		t.Fatalf("king cross:\n%s", king)
+	plinth := classicMask[chess.King][6:]
+	for pt, rows := range classicMask {
+		if strings.Join(rows[6:], "\n") != strings.Join(plinth, "\n") {
+			t.Fatalf("%s does not share the plinth", pt)
+		}
+		if pt != chess.King && strings.Contains(rows[0], "#") {
+			t.Fatalf("%s is as tall as the king", pt)
+		}
 	}
-	if !strings.Contains(classicMask[chess.Rook][1], "##.##") {
-		t.Fatal("rook crown is not crenellated")
+	king := classicMask[chess.King]
+	if king[0] != "......##........" || king[2] != "......##........" || !strings.Contains(king[1], "########") {
+		t.Fatalf("king cross:\n%s", strings.Join(king, "\n"))
 	}
-	if !strings.Contains(classicMask[chess.Queen][2], "####.##.####") {
-		t.Fatal("queen crown is not three spikes")
+	rook := classicMask[chess.Rook]
+	if strings.Count(rook[1], "##") < 3 || strings.Contains(rook[1], "####") {
+		t.Fatalf("rook merlons:\n%s", rook[1])
 	}
-	if !strings.Contains(classicMask[chess.Bishop][1], "####") {
-		t.Fatal("bishop has no ball")
+	if strings.Count(rook[4], "#") >= strings.Count(rook[7], "#") {
+		t.Fatal("rook waist is not narrower than the base")
 	}
-	if !strings.Contains(classicMask[chess.Knight][1], "###") {
-		t.Fatal("knight has no head")
+	queen := classicMask[chess.Queen]
+	if strings.Count(queen[2], "##") < 3 || strings.Contains(queen[2], "####") {
+		t.Fatalf("queen crown:\n%s", queen[2])
+	}
+	bishop := classicMask[chess.Bishop]
+	if !strings.Contains(bishop[1], "####") || strings.Count(bishop[1], "#") <= strings.Count(bishop[3], "#") {
+		t.Fatal("bishop ball is not wider than its neck")
+	}
+	if !strings.Contains(bishop[4], "###.#####") || !strings.Contains(bishop[5], ".###.#####") {
+		t.Fatalf("bishop slit:\n%s\n%s", bishop[4], bishop[5])
+	}
+	knight := classicMask[chess.Knight]
+	if strings.Index(knight[3], "#") >= strings.Index(knight[1], "#") {
+		t.Fatal("knight snout does not lead the ear")
+	}
+	if !strings.Contains(knight[4], "#..#") {
+		t.Fatalf("knight mane notch:\n%s", knight[4])
 	}
 	pawn := classicMask[chess.Pawn]
-	if !strings.Contains(pawn[3], "####") || !strings.Contains(pawn[7], "###########") {
-		t.Fatalf("pawn head or base:\n%s", strings.Join(pawn, "\n"))
+	if strings.Count(pawn[3], "#") <= strings.Count(pawn[4], "#") {
+		t.Fatalf("pawn head is not rounder than its neck:\n%s", strings.Join(pawn, "\n"))
 	}
 }
 

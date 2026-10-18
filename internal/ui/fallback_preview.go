@@ -4,6 +4,9 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"image/png"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -110,6 +113,12 @@ func quadrantBit(ch rune, bit int) bool {
 // BoardPreview rasterises the large starting board through renderBoard, the
 // same function the terminal uses. The cursor sits on e2, as a new game does.
 func BoardPreview() *image.NRGBA {
+	return BoardPreviewFor(PieceClassic)
+}
+
+// BoardPreviewFor is BoardPreview drawn with one piece style. Classic sets
+// and the default use the same wood colours, square size, and cursor.
+func BoardPreviewFor(pieces PieceStyle) *image.NRGBA {
 	s, err := game.New(game.Options{TC: game.PresetByID("none")})
 	if err != nil {
 		return image.NewNRGBA(image.Rect(0, 0, 1, 1))
@@ -119,9 +128,81 @@ func BoardPreview() *image.NRGBA {
 		session: s,
 		machine: interact.New(chess.E2, chess.White),
 		styles:  st,
+		pieces:  pieces,
 		detail:  BlockQuadrant,
 	}
 	return rasterANSI(renderBoard(ctx, sizeW, sizeH, false), 10, 20)
+}
+
+// WritePieceSetPreviews writes preview-set1.png through preview-set5.png and
+// previews-all.png. Each board is the starting position in true colour.
+func WritePieceSetPreviews(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	sets := []struct {
+		name  string
+		style PieceStyle
+	}{
+		{"preview-set1.png", PieceSet1},
+		{"preview-set2.png", PieceSet2},
+		{"preview-set3.png", PieceSet3},
+		{"preview-set4.png", PieceSet4},
+		{"preview-set5.png", PieceSet5},
+	}
+	for _, set := range sets {
+		if err := writePreviewPNG(filepath.Join(dir, set.name), BoardPreviewFor(set.style)); err != nil {
+			return err
+		}
+	}
+	return writePreviewPNG(filepath.Join(dir, "previews-all.png"), PieceSetComparison())
+}
+
+func writePreviewPNG(path string, img image.Image) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return png.Encode(f, img)
+}
+
+// PieceSetComparison places the five alternate starting boards in a row,
+// each labelled, in the same colours BoardPreview uses.
+func PieceSetComparison() *image.NRGBA {
+	sets := []PieceStyle{PieceSet1, PieceSet2, PieceSet3, PieceSet4, PieceSet5}
+	labels := []string{"set1", "set2", "set3", "set4", "set5"}
+	const gap = 16
+	const labelH = 28
+	boards := make([]*image.NRGBA, len(sets))
+	maxW, maxH := 0, 0
+	for i, style := range sets {
+		boards[i] = BoardPreviewFor(style)
+		if boards[i].Bounds().Dx() > maxW {
+			maxW = boards[i].Bounds().Dx()
+		}
+		if boards[i].Bounds().Dy() > maxH {
+			maxH = boards[i].Bounds().Dy()
+		}
+	}
+	w := len(sets)*maxW + (len(sets)+1)*gap
+	h := labelH + maxH + gap*2
+	dst := image.NewNRGBA(image.Rect(0, 0, w, h))
+	frame := color.NRGBA{42, 32, 24, 255}
+	draw.Draw(dst, dst.Bounds(), &image.Uniform{frame}, image.Point{}, draw.Src)
+	ink := image.NewUniform(color.NRGBA{195, 179, 154, 255})
+	for i, board := range boards {
+		x := gap + i*(maxW+gap)
+		d := &font.Drawer{
+			Dst:  dst,
+			Src:  ink,
+			Face: basicfont.Face7x13,
+			Dot:  fixed.P(x, gap+basicfont.Face7x13.Ascent),
+		}
+		d.DrawString(labels[i])
+		draw.Draw(dst, image.Rect(x, labelH+gap, x+board.Bounds().Dx(), labelH+gap+board.Bounds().Dy()), board, board.Bounds().Min, draw.Src)
+	}
+	return dst
 }
 
 func rasterANSI(board string, pxW, pxH int) *image.NRGBA {

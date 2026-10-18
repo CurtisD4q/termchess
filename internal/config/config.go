@@ -18,7 +18,7 @@ type Config struct {
 	Graphics string `json:"graphics"`
 	// Blocks is auto, quadrant, sextant, or octant. auto keeps xfce on quadrants.
 	Blocks string `json:"blocks"`
-	// Pieces is classic or silhouette. classic is the block sprites.
+	// Pieces is classic, silhouette, or set1..set5. classic is the default block set.
 	Pieces string `json:"pieces"`
 	// MovePaceMs is the minimum gap between showing two moves, in milliseconds.
 	// Zero applies a move the moment it is ready. The default is 400.

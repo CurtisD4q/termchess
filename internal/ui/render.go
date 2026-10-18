@@ -114,8 +114,8 @@ type cellCtx struct {
 	illegal  bool
 	// mono forces the colorless cursor (brackets) even when the theme is wood.
 	mono bool
-	// pieces selects classic blocks or the hand-drawn silhouettes. The zero
-	// value is classic.
+	// pieces selects classic blocks, an alternate classic set, or the
+	// hand-drawn silhouettes. The zero value is classic.
 	pieces PieceStyle
 	// detail selects quadrant, sextant, or octant text art.
 	detail BlockDetail

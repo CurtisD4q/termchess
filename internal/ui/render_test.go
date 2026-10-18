@@ -88,48 +88,87 @@ func TestClassicBitmaps(t *testing.T) {
 			t.Fatalf("%s collapsed %q", pt, flat)
 		}
 	}
-	plinth := classicMask[chess.King][6:]
-	for pt, rows := range classicMask {
-		if strings.Join(rows[6:], "\n") != strings.Join(plinth, "\n") {
-			t.Fatalf("%s does not share the plinth", pt)
-		}
-		if pt != chess.King && strings.Contains(rows[0], "#") {
-			t.Fatalf("%s is as tall as the king", pt)
-		}
+	if strings.Join(classicMask[chess.Knight], "\n") != strings.Join(pieceSet1[chess.Knight], "\n") {
+		t.Fatal("knight is not the set1 piece")
 	}
 	king := classicMask[chess.King]
-	if king[0] != "......##........" || king[2] != "......##........" || !strings.Contains(king[1], "########") {
-		t.Fatalf("king cross:\n%s", strings.Join(king, "\n"))
+	set1King := pieceSet1[chess.King]
+	// One sample row thick, on the higher position (sample row 1).
+	if king[1] != "...##########..." || !symmetricPixels(king[1]) {
+		t.Fatalf("king crossbar:\n%s", king[1])
 	}
-	rook := classicMask[chess.Rook]
-	if strings.Count(rook[1], "##") < 3 || strings.Contains(rook[1], "####") {
-		t.Fatalf("rook merlons:\n%s", rook[1])
+	if strings.Count(king[1], "#") != strings.Count(set1King[1], "#")+2 {
+		t.Fatal("king crossbar is not one pixel wider on each side")
 	}
-	if strings.Count(rook[4], "#") >= strings.Count(rook[7], "#") {
-		t.Fatal("rook waist is not narrower than the base")
+	if king[0] != "......####......" || king[2] != king[0] || king[3] != king[0] {
+		t.Fatal("king stem does not frame the crossbar")
+	}
+	for i, row := range king {
+		if i == 1 {
+			continue
+		}
+		if row != set1King[i] {
+			t.Fatalf("king row %d changed:\n%s", i, row)
+		}
 	}
 	queen := classicMask[chess.Queen]
-	if strings.Count(queen[2], "##") < 3 || strings.Contains(queen[2], "####") {
-		t.Fatalf("queen crown:\n%s", queen[2])
+	if queen[0] != ".......##......." || queen[1] != ".##.##.##.##.##." {
+		t.Fatalf("queen crown:\n%s\n%s", queen[0], queen[1])
 	}
-	bishop := classicMask[chess.Bishop]
-	if !strings.Contains(bishop[1], "####") || strings.Count(bishop[1], "#") <= strings.Count(bishop[3], "#") {
-		t.Fatal("bishop ball is not wider than its neck")
+	if strings.Count(queen[4], "#") >= strings.Count(queen[3], "#") || strings.Count(queen[3], "#") >= strings.Count(queen[7], "#") {
+		t.Fatal("queen body does not taper into the base")
 	}
-	if !strings.Contains(bishop[4], "###.#####") || !strings.Contains(bishop[5], ".###.#####") {
-		t.Fatalf("bishop slit:\n%s\n%s", bishop[4], bishop[5])
+	if queen[6] != classicMask[chess.King][6] || queen[7] != classicMask[chess.King][7] {
+		t.Fatal("queen does not share the king's base")
 	}
-	knight := classicMask[chess.Knight]
-	if strings.Index(knight[3], "#") >= strings.Index(knight[1], "#") {
-		t.Fatal("knight snout does not lead the ear")
+	if strings.Join(classicMask[chess.Bishop], "\n") != strings.Join(pieceSet4[chess.Bishop], "\n") {
+		t.Fatal("bishop is not the set4 bishop")
 	}
-	if !strings.Contains(knight[4], "#..#") {
-		t.Fatalf("knight mane notch:\n%s", knight[4])
+	rook := classicMask[chess.Rook]
+	// 1010101 in 2px blocks, centred: four merlons and three gaps.
+	if rook[1] != ".##..##..##..##." || rook[2] != rook[1] {
+		t.Fatalf("rook crenellations:\n%s\n%s", rook[1], rook[2])
+	}
+	if rook[3] != ".##############." || rook[7] != rook[3] {
+		t.Fatalf("rook top and base differ:\n%s\n%s", rook[3], rook[7])
+	}
+	if strings.Count(rook[4], "#") >= strings.Count(rook[3], "#") || rook[4] != "..############.." || rook[5] != rook[4] || rook[6] != rook[4] {
+		t.Fatal("rook body is not a centred shaft narrower than the top")
+	}
+	for _, row := range rook {
+		if !symmetricPixels(row) {
+			t.Fatalf("rook row is not symmetric:\n%s", row)
+		}
+	}
+	for _, row := range queen[:2] {
+		if !symmetricPixels(row) {
+			t.Fatalf("queen crown is not symmetric:\n%s", row)
+		}
 	}
 	pawn := classicMask[chess.Pawn]
-	if strings.Count(pawn[3], "#") <= strings.Count(pawn[4], "#") {
-		t.Fatalf("pawn head is not rounder than its neck:\n%s", strings.Join(pawn, "\n"))
+	if pawn[0] != "................" || pawn[1] != "................" {
+		t.Fatalf("pawn is too tall:\n%s", strings.Join(pawn, "\n"))
 	}
+	if pawn[2] != ".......##......." || pawn[3] != "......####......" {
+		t.Fatalf("pawn head is not a rounded square:\n%s", strings.Join(pawn, "\n"))
+	}
+	neck := strings.Count(pawn[4], "#")
+	if pawn[5] != pawn[4] || neck <= 1 || neck >= strings.Count(pawn[3], "#") {
+		t.Fatalf("pawn neck:\n%s", strings.Join(pawn, "\n"))
+	}
+	set3 := pieceSet3[chess.Pawn]
+	if pawn[6] != set3[6] || pawn[7] != set3[7] {
+		t.Fatal("pawn base is not the set3 base")
+	}
+}
+
+func symmetricPixels(row string) bool {
+	for i := 0; i < len(row)/2; i++ {
+		if row[i] != row[len(row)-1-i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestResolvePieces(t *testing.T) {
@@ -145,6 +184,93 @@ func TestResolvePieces(t *testing.T) {
 	if _, err := ResolvePieces("blob", ""); err == nil {
 		t.Fatal("blob was accepted")
 	}
+	for i, style := range []PieceStyle{PieceSet1, PieceSet2, PieceSet3, PieceSet4, PieceSet5} {
+		name := "set" + string(rune('1'+i))
+		if got, err := ResolvePieces(name, "classic"); err != nil || got != style {
+			t.Fatalf("%s = %v %v", name, got, err)
+		}
+	}
+}
+
+func TestPieceSets(t *testing.T) {
+	order := []chess.PieceType{chess.King, chess.Queen, chess.Rook, chess.Bishop, chess.Knight, chess.Pawn}
+	sets := []PieceStyle{PieceSet1, PieceSet2, PieceSet3, PieceSet4, PieceSet5}
+	seen := map[string]PieceStyle{}
+	classicJoined := joinedMask(classicMask, order)
+	for _, style := range sets {
+		set := pieceSetByStyle(style)
+		if set == nil {
+			t.Fatalf("%s missing", style)
+		}
+		local := map[string]chess.PieceType{}
+		for _, pt := range order {
+			rows := set[pt]
+			if len(rows) != sizeH*2 {
+				t.Fatalf("%s %s has %d rows", style, pt, len(rows))
+			}
+			for _, row := range rows {
+				if len(row) != sizeW*2 {
+					t.Fatalf("%s %s row %q", style, pt, row)
+				}
+				for _, col := range []int{0, 1, sizeW*2 - 2, sizeW*2 - 1} {
+					if row[col] == '#' {
+						t.Fatalf("%s %s touches the square edge %q", style, pt, row)
+					}
+				}
+			}
+			flat := strings.Join(rows, "\n")
+			if prev, ok := local[flat]; ok {
+				t.Fatalf("%s %s matches %s", style, pt, prev)
+			}
+			local[flat] = pt
+			if !notchedTop(set[chess.Rook]) {
+				t.Fatalf("%s rook is not notched", style)
+			}
+		}
+		whole := joinedMask(set, order)
+		if whole == classicJoined {
+			t.Fatalf("%s matches the default classic set", style)
+		}
+		if prev, ok := seen[whole]; ok {
+			t.Fatalf("%s matches %s", style, prev)
+		}
+		seen[whole] = style
+		if !strings.Contains(set[chess.King][0], "#") && !strings.Contains(set[chess.King][1], "#") {
+			t.Fatalf("%s king has no cross", style)
+		}
+	}
+	s := mustPos(t, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+	base := cellCtx{session: s, machine: interact.New(chess.E2, chess.White), styles: theme.For(theme.Wood, true)}
+	classic := renderBoard(base, sizeW, sizeH, false)
+	for _, style := range sets {
+		ctx := base
+		ctx.pieces = style
+		got := renderBoard(ctx, sizeW, sizeH, false)
+		if got == classic {
+			t.Fatalf("%s rendered the default pieces", style)
+		}
+		if !strings.Contains(got, "48;2;176;138;100") || !strings.Contains(got, "48;2;242;242;122") {
+			t.Fatalf("%s changed the board colours", style)
+		}
+	}
+}
+
+func joinedMask(set map[chess.PieceType][]string, order []chess.PieceType) string {
+	var b strings.Builder
+	for _, pt := range order {
+		b.WriteString(strings.Join(set[pt], "\n"))
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func notchedTop(rows []string) bool {
+	for _, row := range rows[:3] {
+		if strings.Contains(row, "##") && strings.Contains(row, "#.#") || strings.Contains(row, "##..##") || strings.Contains(row, "##...##") {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRenderPiecesEverySizeAndStyle(t *testing.T) {
@@ -165,7 +291,7 @@ func TestRenderPiecesEverySizeAndStyle(t *testing.T) {
 		{"quadrant", sizeW, sizeH, BlockQuadrant},
 		{"sextant", sizeW, sizeH, BlockSextant},
 	}
-	for _, style := range []PieceStyle{PieceClassic, PieceSilhouette} {
+	for _, style := range []PieceStyle{PieceClassic, PieceSilhouette, PieceSet1, PieceSet2, PieceSet3, PieceSet4, PieceSet5} {
 		for _, sz := range sizes {
 			t.Run(style.String()+"/"+sz.name, func(t *testing.T) {
 				ctx := cellCtx{
@@ -397,7 +523,7 @@ func TestKnightMarginAndCleanInk(t *testing.T) {
 	m := interact.New(chess.A1, chess.NoColor)
 	ctx := cellCtx{session: s, machine: m, styles: st}
 	for _, sz := range [][2]int{{sizeW, sizeH}} {
-		for _, pt := range []chess.PieceType{chess.King, chess.Queen, chess.Rook, chess.Bishop, chess.Knight, chess.Pawn} {
+		for _, pt := range []chess.PieceType{chess.King, chess.Bishop, chess.Knight, chess.Pawn} {
 			for sub := 0; sub < sz[1]; sub++ {
 				line := spriteLine(pt, sz[0], sz[1], sub)
 				if line[0] != ' ' || line[len(line)-1] != ' ' {

@@ -10,6 +10,16 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "sets" {
+		dir := "."
+		if len(os.Args) > 2 {
+			dir = os.Args[2]
+		}
+		if err := ui.WritePieceSetPreviews(dir); err != nil {
+			panic(err)
+		}
+		return
+	}
 	path := "pieces-fallback-preview.png"
 	if len(os.Args) > 1 {
 		path = os.Args[1]

@@ -26,13 +26,32 @@ type PieceStyle int
 const (
 	PieceClassic PieceStyle = iota
 	PieceSilhouette
+	// PieceSet1 through PieceSet5 are alternate classic block sets on the
+	// same 16×8 grid. The default stays PieceClassic.
+	PieceSet1
+	PieceSet2
+	PieceSet3
+	PieceSet4
+	PieceSet5
 )
 
 func (s PieceStyle) String() string {
-	if s == PieceSilhouette {
+	switch s {
+	case PieceSilhouette:
 		return "silhouette"
+	case PieceSet1:
+		return "set1"
+	case PieceSet2:
+		return "set2"
+	case PieceSet3:
+		return "set3"
+	case PieceSet4:
+		return "set4"
+	case PieceSet5:
+		return "set5"
+	default:
+		return "classic"
 	}
-	return "classic"
 }
 
 // ParsePieces reads a flag or config value. Empty is classic.
@@ -42,8 +61,18 @@ func ParsePieces(s string) (PieceStyle, error) {
 		return PieceClassic, nil
 	case "silhouette", "silhouettes":
 		return PieceSilhouette, nil
+	case "set1":
+		return PieceSet1, nil
+	case "set2":
+		return PieceSet2, nil
+	case "set3":
+		return PieceSet3, nil
+	case "set4":
+		return PieceSet4, nil
+	case "set5":
+		return PieceSet5, nil
 	default:
-		return PieceClassic, fmt.Errorf("unknown --pieces %q (want classic or silhouette)", s)
+		return PieceClassic, fmt.Errorf("unknown --pieces %q (want classic, silhouette, or set1..set5)", s)
 	}
 }
 
@@ -77,59 +106,64 @@ func spriteSize(cellW, cellH int) bool {
 	return cellW == sizeW && cellH == sizeH
 }
 
-// classicMask is the classic picture at quadrant resolution: 16 samples
-// across and 8 down, two samples per cell of the 8×4 square. '#' is the
-// piece and '.' is the square. One colour, no outline. The last two rows are
-// the same plinth on every piece. The king is the only piece that uses the
-// top row, so its cross stands above the others. The first and last sample
-// columns stay empty.
+// classicMask is the default classic picture at quadrant resolution: 16
+// samples across and 8 down, two samples per cell of the 8×4 square. '#' is
+// the piece and '.' is the square. One colour, no outline. It is the set1
+// drawing, with the set4 bishop, a rook whose notched top and base are the
+// same width and wider than the body, and the set3 pawn base under a rounded
+// square head and a thick neck. The queen is a five-point crown over a
+// taper, on the same base as the king. The king's crossbar is one pixel
+// wider on each side than the set1 cross, one sample row thick, on the
+// higher sample row. The rook crenellations are 1010101
+// in 2px blocks, centred on the sprite. The first and last sample columns
+// stay empty.
 var classicMask = map[chess.PieceType][]string{
 	chess.King: {
-		"......##........",
-		"....########....",
-		"......##........",
-		".....######.....",
+		"......####......",
+		"...##########...",
+		"......####......",
+		"......####......",
 		"....########....",
 		"....########....",
 		"...##########...",
 		"..############..",
 	},
 	chess.Queen: {
-		"................",
-		"......##........",
-		"..##..##..##....",
-		"..##..##..##....",
-		".....######.....",
+		".......##.......",
+		".##.##.##.##.##.",
+		"..############..",
 		"....########....",
+		"......####......",
+		"......####......",
 		"...##########...",
 		"..############..",
 	},
 	chess.Rook: {
 		"................",
-		"..##..##..##....",
-		"..##..##..##....",
+		".##..##..##..##.",
+		".##..##..##..##.",
+		".##############.",
 		"..############..",
-		"....########....",
-		"....########....",
-		"...##########...",
 		"..############..",
+		"..############..",
+		".##############.",
 	},
 	chess.Bishop: {
 		"................",
 		"......####......",
+		"....########....",
 		"......####......",
-		".......##.......",
-		"...###.#####....",
-		"....###.#####...",
+		"....########....",
+		"....########....",
 		"...##########...",
 		"..############..",
 	},
 	chess.Knight: {
 		"................",
-		"......##........",
-		"..######........",
-		"..########......",
-		"..######..##....",
+		"........##......",
+		"......######....",
+		"....########....",
+		"....######..##..",
 		"....########....",
 		"...##########...",
 		"..############..",
@@ -137,12 +171,12 @@ var classicMask = map[chess.PieceType][]string{
 	chess.Pawn: {
 		"................",
 		"................",
-		"......####......",
-		".....######.....",
 		".......##.......",
+		"......####......",
+		".......##.......",
+		".......##.......",
+		".....######.....",
 		"....########....",
-		"...##########...",
-		"..############..",
 	},
 }
 
@@ -254,7 +288,7 @@ func (c cellCtx) renderClassicLine(sq chess.Square, sub, cellW, cellH int) strin
 	tile, _, mono := c.tileInk(sq)
 	var rows []string
 	if p != chess.NoPiece {
-		rows = classicMask[p.Type()]
+		rows = maskFor(c.pieces, p.Type())
 	}
 	fg := whiteBody
 	if p != chess.NoPiece && p.Color() == chess.Black {

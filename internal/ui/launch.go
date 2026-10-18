@@ -35,7 +35,7 @@ func Prepare(args []string, env []string, cfg config.Config) (Prepared, error) {
 	colorFlag := fs.String("color", "auto", "color mode: auto, truecolor, 256, 16, or none")
 	graphicsFlag := fs.String("graphics", "", "piece images stay off unless this is kitty, iterm, or sixel; off forces text")
 	blocksFlag := fs.String("blocks", "auto", "text pieces: auto, quadrant, sextant, or octant")
-	piecesFlag := fs.String("pieces", "classic", "text pieces: classic (default) or silhouette")
+	piecesFlag := fs.String("pieces", "classic", "text pieces: classic (default), silhouette, or set1..set5")
 	debugDump := fs.Bool("debug-dump", false, "print one frame of the start position and exit")
 	if err := fs.Parse(args); err != nil {
 		return Prepared{}, err

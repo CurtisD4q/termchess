@@ -82,7 +82,7 @@ type Options struct {
 	Graphics gfx.Mode
 	// Blocks is the text-art glyph set. The zero value is quadrants.
 	Blocks BlockDetail
-	// Pieces is classic or silhouette. The zero value is classic.
+	// Pieces is classic, silhouette, or set1..set5. The zero value is classic.
 	Pieces PieceStyle
 	// Profile is the colour depth board cells should emit. The zero value
 	// is 24-bit. main sets this from --color and the terminal environment.

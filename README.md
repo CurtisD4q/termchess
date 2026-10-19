@@ -84,13 +84,13 @@ Promotion opens an overlay (`Q R B N`). Left and Right change the piece, Enter c
 | `s` | Save PGN |
 | `o` | Open a saved game |
 | `n` | New game |
-| `r` | Resign |
+| `r` | Resign. The hint bar shows this during a live game. It asks `Resign? y/n`. In a local game the side to move resigns; against the computer, you resign. Nothing happens once the game is over |
 | `d` | Offer a draw, accept one, or claim threefold / fifty-move |
 | `Tab` | Focus the board or the move history |
 | `?` | Toggle the full help list |
 | `q` / `Ctrl+C` | Quit |
 
-New game, resign, quit mid-game, and loading over an unsaved game ask for confirmation. `y` accepts, `n` or `Esc` declines.
+New game, resign, quit mid-game, and loading over an unsaved game ask for confirmation. `y` accepts, `n` or `Esc` declines. A resignation ends the game `0-1` or `1-0`, the status line names who resigned, and the saved PGN records `Result` and `Termination` (for example `White resigns`). The same end-of-game actions as any other finished game are then available.
 
 The short help bar is always visible during a game. `?` expands it.
 

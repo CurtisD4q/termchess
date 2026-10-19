@@ -105,7 +105,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 	if k.over {
 		return []key.Binding{k.New, k.Save, k.Help, k.Quit}
 	}
-	return []key.Binding{k.Select, k.Cancel, k.Undo, k.Flip, k.Focus, k.Help, k.Quit}
+	return []key.Binding{k.Select, k.Cancel, k.Undo, k.Resign, k.Flip, k.Focus, k.Help, k.Quit}
 }
 
 // FullHelp is the list toggled with ?.

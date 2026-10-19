@@ -116,6 +116,9 @@ type Session struct {
 	timedOut   bool
 	flagDraw   bool
 	flagColor  chess.Color
+	// resigned is the side that resigned, or NoColor. It is restored from
+	// the Termination tag when a saved game is loaded.
+	resigned chess.Color
 }
 
 type undoSnap struct {
@@ -193,6 +196,14 @@ func LoadPGN(data string) (*Session, error) {
 	if tp := g.GetTagPair("Elo"); tp != nil {
 		if n, err := strconv.Atoi(tp.Value); err == nil {
 			s.elo = n
+		}
+	}
+	if tp := g.GetTagPair("Termination"); tp != nil {
+		switch tp.Value {
+		case "White resigns":
+			s.resigned = chess.White
+		case "Black resigns":
+			s.resigned = chess.Black
 		}
 	}
 	s.tc = parseTC(tag(g, "TimeControl"))
@@ -455,12 +466,19 @@ func (s *Session) pushUndo() {
 	s.undo = append(s.undo, undoSnap{g: s.g.Clone(), clock: s.clk.Snapshot()})
 }
 
-// Resign makes color resign.
+// Resign makes color resign. The game ends 0-1 if White resigns and 1-0 if
+// Black resigns. A second call, or a call after the game is already over,
+// does nothing.
 func (s *Session) Resign(color chess.Color) tea.Cmd {
-	if s.Over() {
+	if s.Over() || (color != chess.White && color != chess.Black) {
 		return nil
 	}
 	s.g.Resign(color)
+	if s.g.Method() != chess.Resignation {
+		return nil
+	}
+	s.resigned = color
+	s.g.AddTagPair("Termination", color.Name()+" resigns")
 	s.unsaved = true
 	s.drawOffer = chess.NoColor
 	return s.clk.Halt()
@@ -580,6 +598,9 @@ func (s *Session) ResultText() string {
 	}
 	if s.timedOut {
 		return fmt.Sprintf("%s flagged — %s wins", s.flagColor.Name(), s.flagColor.Other().Name())
+	}
+	if s.resigned == chess.White || s.resigned == chess.Black {
+		return s.resigned.Name() + " resigns — " + winnerName(s.g.Outcome()) + " wins"
 	}
 	switch s.g.Method() {
 	case chess.Checkmate:

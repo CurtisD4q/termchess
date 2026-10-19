@@ -728,6 +728,86 @@ func TestKittyOverlayOnE2(t *testing.T) {
 	}
 }
 
+func TestResignLocalAndComputer(t *testing.T) {
+	a := testApp(t)
+	s, err := game.New(game.Options{Mode: game.ModeLocal, WhiteName: "Ada", BlackName: "Grace", TC: game.PresetByID("none")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.useSession(s)
+	a.width, a.height = 140, 64
+	if !strings.Contains(a.View().Content, "resign") {
+		t.Fatal("live hint bar does not show resign")
+	}
+	a = send(a, "r")
+	if a.formKind != formConfirm || a.confirmKind != confirmResign {
+		t.Fatalf("confirm %v %v", a.formKind, a.confirmKind)
+	}
+	if !strings.Contains(a.View().Content, "Resign? y/n") {
+		t.Fatalf("dialog missing:\n%s", a.View().Content)
+	}
+	a = send(a, "n")
+	if a.session.Over() || a.formKind != formNone {
+		t.Fatal("declining resign ended the game")
+	}
+
+	a = send(a, "r")
+	a = send(a, "y")
+	if a.session.Outcome() != chess.BlackWon || !strings.Contains(a.session.ResultText(), "White resigns") {
+		t.Fatalf("white to move: %s %q", a.session.Outcome(), a.session.ResultText())
+	}
+	view := a.View().Content
+	if !strings.Contains(view, "White resigns") || !strings.Contains(view, "new game") {
+		t.Fatalf("end screen:\n%s", view)
+	}
+	a = send(a, "r")
+	if a.formKind != formNone || a.session.Outcome() != chess.BlackWon {
+		t.Fatal("resign stayed available after the game ended")
+	}
+
+	b := testApp(t)
+	bs, err := game.New(game.Options{Mode: game.ModeLocal, TC: game.PresetByID("none")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bs.Play(mustUCI(t, bs, "e2e4")); err != nil {
+		t.Fatal(err)
+	}
+	b.useSession(bs)
+	b.width, b.height = 140, 64
+	b = send(b, "r")
+	b = send(b, "y")
+	if b.session.Outcome() != chess.WhiteWon || !strings.Contains(b.session.ResultText(), "Black resigns") {
+		t.Fatalf("black to move: %s %q", b.session.Outcome(), b.session.ResultText())
+	}
+	if !strings.Contains(b.session.PGN(), `[Result "1-0"]`) || !strings.Contains(b.session.PGN(), `[Termination "Black resigns"]`) {
+		t.Fatalf("pgn:\n%s", b.session.PGN())
+	}
+
+	c := computerApp(t, "e7e5")
+	c = send(c, "r")
+	c = send(c, "y")
+	if c.session.Outcome() != chess.BlackWon || !strings.Contains(c.session.ResultText(), "White resigns") {
+		t.Fatalf("human white vs computer: %s %q", c.session.Outcome(), c.session.ResultText())
+	}
+
+	d := testApp(t)
+	ds, err := game.New(game.Options{
+		Mode: game.ModeComputer, Human: chess.Black, WhiteName: "Hypersion", BlackName: "You",
+		TC: game.PresetByID("none"), Elo: 1500,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.useSession(ds)
+	d.width, d.height = 140, 64
+	d = send(d, "r")
+	d = send(d, "y")
+	if d.session.Outcome() != chess.WhiteWon || !strings.Contains(d.session.ResultText(), "Black resigns") {
+		t.Fatalf("human black vs computer: %s %q", d.session.Outcome(), d.session.ResultText())
+	}
+}
+
 func TestGraphicsOffStaysText(t *testing.T) {
 	a := testApp(t)
 	s, err := game.New(game.Options{TC: game.PresetByID("none")})

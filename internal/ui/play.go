@@ -92,7 +92,7 @@ func (a *App) onPlayKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if a.session.Over() {
 			return a, nil
 		}
-		return a.ask(confirmResign, "Resign?")
+		return a.ask(confirmResign, "Resign? y/n")
 	case key.Matches(msg, a.keys.Draw):
 		return a.onDraw()
 	}

@@ -311,6 +311,48 @@ func TestPromotionAndThreefold(t *testing.T) {
 	}
 }
 
+func TestResignResultAndPGN(t *testing.T) {
+	white := local()
+	if cmd := white.Resign(chess.White); cmd == nil {
+		t.Fatal("resign did not stop the clock")
+	}
+	if !white.Over() || white.Outcome() != chess.BlackWon || white.Method() != chess.Resignation {
+		t.Fatalf("white resign: over=%v outcome=%s method=%s", white.Over(), white.Outcome(), white.Method())
+	}
+	if white.ResultText() != "White resigns — Black wins" {
+		t.Fatalf("status %q", white.ResultText())
+	}
+	pgn := white.PGN()
+	for _, tag := range []string{`[Result "0-1"]`, `[Termination "White resigns"]`} {
+		if !strings.Contains(pgn, tag) {
+			t.Fatalf("pgn missing %s:\n%s", tag, pgn)
+		}
+	}
+	loaded, err := LoadPGN(pgn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Over() || loaded.Outcome() != chess.BlackWon || loaded.ResultText() != white.ResultText() {
+		t.Fatalf("loaded %v %s %q", loaded.Over(), loaded.Outcome(), loaded.ResultText())
+	}
+	if loaded.Resign(chess.Black) != nil || loaded.Outcome() != chess.BlackWon {
+		t.Fatal("resign after the game ended changed the result")
+	}
+
+	black := local()
+	mustMove(t, black, "e2e4")
+	_ = black.Resign(chess.Black)
+	if black.Outcome() != chess.WhiteWon {
+		t.Fatalf("black resign outcome %s", black.Outcome())
+	}
+	if black.ResultText() != "Black resigns — White wins" {
+		t.Fatalf("status %q", black.ResultText())
+	}
+	if !strings.Contains(black.PGN(), `[Result "1-0"]`) || !strings.Contains(black.PGN(), `[Termination "Black resigns"]`) {
+		t.Fatalf("pgn:\n%s", black.PGN())
+	}
+}
+
 func TestPremoveMatch(t *testing.T) {
 	s := local()
 	mustMove(t, s, "e2e4")

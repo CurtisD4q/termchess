@@ -26,7 +26,7 @@ func newForm(groups ...*huh.Group) *huh.Form {
 func (a *App) menuForm() *huh.Form {
 	desc := "Arrow keys or hjkl move the cursor. Enter selects. No typed moves."
 	if !a.engineOK {
-		desc += "\n\nStockfish was not found. Two-player and saved games still work. Install Stockfish or pass --stockfish to play the computer."
+		desc += "\n\nHypersion was not found. Two-player and saved games still work. Build Hypersion or pass --engine to play the computer."
 	}
 	a.choice = "local"
 	return newForm(huh.NewGroup(

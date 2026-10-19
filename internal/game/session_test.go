@@ -164,18 +164,18 @@ func TestEloHeaderAndStatus(t *testing.T) {
 		Mode:      ModeComputer,
 		Human:     chess.White,
 		WhiteName: "You",
-		BlackName: "Stockfish (1650)",
+		BlackName: "Hypersion (1650)",
 		Elo:       1650,
 		TC:        PresetByID("none"),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(s.StatusLine(true, false), "Stockfish (1650)") {
+	if !strings.Contains(s.StatusLine(true, false), "Hypersion (1650)") {
 		t.Fatalf("status %q", s.StatusLine(true, false))
 	}
 	pgn := s.PGN()
-	for _, h := range []string{`[Black "Stockfish (1650)"]`, `[Elo "1650"]`, `[BlackElo "1650"]`} {
+	for _, h := range []string{`[Black "Hypersion (1650)"]`, `[Elo "1650"]`, `[BlackElo "1650"]`} {
 		if !strings.Contains(pgn, h) {
 			t.Fatalf("pgn missing %s\n%s", h, pgn)
 		}

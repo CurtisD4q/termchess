@@ -8,7 +8,7 @@ import (
 
 func TestFindExplicit(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "stockfish")
+	path := filepath.Join(dir, "hypersion")
 	if err := os.WriteFile(path, []byte("#!/bin/sh\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -371,7 +371,7 @@ func computerApp(t *testing.T, reply string) *App {
 		Mode:      game.ModeComputer,
 		Human:     chess.White,
 		WhiteName: "You",
-		BlackName: "Stockfish",
+		BlackName: "Hypersion",
 		TC:        game.PresetByID("none"),
 		Elo:       1500,
 	})
@@ -537,7 +537,7 @@ func TestPremoveAndEngine(t *testing.T) {
 		Mode:      game.ModeComputer,
 		Human:     chess.White,
 		WhiteName: "You",
-		BlackName: "Stockfish",
+		BlackName: "Hypersion",
 		TC:        game.PresetByID("none"),
 		Elo:       1500,
 	})

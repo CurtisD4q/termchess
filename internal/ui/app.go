@@ -67,14 +67,14 @@ const (
 
 // Options configures the program. Tests inject a mock engine and a temp directory.
 type Options struct {
-	StockfishPath string
-	EngineOK      bool
-	Engine        engine.Engine
-	Config        config.Config
-	ConfigPath    string
-	DataDir       string
-	Logger        *log.Logger
-	ColorMode     ColorMode
+	EnginePath string
+	EngineOK   bool
+	Engine     engine.Engine
+	Config     config.Config
+	ConfigPath string
+	DataDir    string
+	Logger     *log.Logger
+	ColorMode  ColorMode
 	// Colorless is set when the resolved profile cannot draw square colours,
 	// including --color none and an auto profile that landed on ASCII.
 	Colorless bool
@@ -201,8 +201,8 @@ func New(opt Options) *App {
 		dataDir:    opt.DataDir,
 		themeID:    theme.Parse(cfg.Theme),
 		eng:        opt.Engine,
-		enginePath: opt.StockfishPath,
-		engineOK:   opt.EngineOK || opt.Engine != nil || opt.StockfishPath != "",
+		enginePath: opt.EnginePath,
+		engineOK:   opt.EngineOK || opt.Engine != nil || opt.EnginePath != "",
 		log:        opt.Logger,
 		colorMode:  opt.ColorMode,
 		colorless:  opt.Colorless || opt.ColorMode == ColorNone,
@@ -362,7 +362,7 @@ func (a *App) finishForm() (tea.Model, tea.Cmd) {
 		switch a.choice {
 		case "computer":
 			if !a.engineOK {
-				a.setToast("Stockfish was not found — two-player is still available")
+				a.setToast("Hypersion was not found — two-player is still available")
 				return a.openMenu()
 			}
 			return a.openSetup(game.ModeComputer)
@@ -557,9 +557,9 @@ func (a *App) ensureEngine() error {
 		return nil
 	}
 	if a.enginePath == "" {
-		return fmt.Errorf("stockfish is not available")
+		return fmt.Errorf("hypersion is not available")
 	}
-	e, err := engine.NewStockfish(a.enginePath)
+	e, err := engine.New(a.enginePath)
 	if err != nil {
 		return err
 	}
@@ -723,7 +723,7 @@ func (a *App) onFile(msg fileMsg) (tea.Model, tea.Cmd) {
 	if s.Mode() == game.ModeComputer {
 		if err := a.ensureEngine(); err != nil {
 			s.DemoteToLocal()
-			a.setToast("Stockfish missing — loaded as two-player")
+			a.setToast("Hypersion missing — loaded as two-player")
 		}
 	}
 	a.log.Info("loaded", "file", msg.name, "plies", s.MoveCount())

@@ -275,7 +275,7 @@ func (s *Session) Game() *chess.Game { return s.g }
 // Mode returns local or computer.
 func (s *Session) Mode() Mode { return s.mode }
 
-// DemoteToLocal turns a computer game into pass-and-play (used when Stockfish
+// DemoteToLocal turns a computer game into pass-and-play (used when Hypersion
 // is missing at load time).
 func (s *Session) DemoteToLocal() {
 	s.mode = ModeLocal
@@ -631,7 +631,7 @@ func (s *Session) StatusLine(thinking, premove bool) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s to move", s.Turn().Name())
 	if s.mode == ModeComputer && s.elo > 0 {
-		fmt.Fprintf(&b, "  ·  Stockfish (%d)", s.elo)
+		fmt.Fprintf(&b, "  ·  Hypersion (%d)", s.elo)
 	}
 	if s.InCheck() {
 		b.WriteString("  ·  check")

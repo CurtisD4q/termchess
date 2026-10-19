@@ -2,7 +2,7 @@
 
 A keyboard-only chess game for the terminal. The cursor moves with the arrow keys or `hjkl`. Enter or Space selects a piece and plays a legal move. There is no typed move input.
 
-Rules come from [github.com/notnil/chess](https://github.com/notnil/chess): legality, check, checkmate, stalemate, castling, en passant, promotion, threefold repetition, the fifty-move rule, and insufficient material. The computer opponent is Stockfish over UCI. If the binary is missing, two-player mode and saved games still work.
+Rules come from [github.com/notnil/chess](https://github.com/notnil/chess): legality, check, checkmate, stalemate, castling, en passant, promotion, threefold repetition, the fifty-move rule, and insufficient material. The computer opponent is [Hypersion](https://github.com/RenCopp/Hypersion) over UCI. If the binary is missing, two-player mode and saved games still work.
 
 ## Install
 
@@ -21,32 +21,36 @@ Colour follows the terminal. `--color` is `auto` (default), `truecolor`, `256`, 
 
 The board always draws the block pieces. `--pieces` is `classic` (default), `silhouette`, or an alternate classic set `set1` through `set5`. The alternate sets use the same 8×4 grid, colours, and board; `classic` stays the default. `--graphics` is off unless you pass `kitty`, `iterm`, or `sixel`. Omitting the flag leaves images off. `--graphics off` forces text. Nothing else selects a protocol: not `TERM`, not `KITTY_WINDOW_ID`, `KITTY_PID`, or `KITTY_PUBLIC_KEY`, not a terminal query, and not `graphics` in `config.json`. There is no `auto` value. The text pieces stay in every square either way. `--debug-dump` prints one frame of the starting position and exits.
 
-### Stockfish
+### Hypersion
 
-The game looks for `stockfish` on `PATH`, then a few common locations (`/usr/games/stockfish`, Homebrew, `C:\Program Files\Stockfish\stockfish.exe`). Pass an explicit binary with `--stockfish`.
+The computer is [Hypersion](https://github.com/RenCopp/Hypersion), a GPL-3.0 UCI engine. Termchess starts it as a separate program and does not link it, so Hypersion's license does not cover this project. It looks for `hypersion` or `Hypersion` on `PATH`, then `/usr/local/bin`, `/usr/bin`, Homebrew, and `C:\Program Files\Hypersion\Hypersion.exe`. Pass an explicit binary with `--engine`.
 
-**macOS**
+Hypersion needs two NNUE files next to the binary. They are not in the Hypersion git repository. They are the Stockfish 18 networks, also GPL-3.0:
+
+- `nn-c288c895ea92.nnue` (big, about 104 MB)
+- `nn-37f18f62d772.nnue` (small, about 3 MB)
 
 ```sh
-brew install stockfish
+git clone https://github.com/RenCopp/Hypersion.git
+cd Hypersion
+make build
+curl -L -O https://tests.stockfishchess.org/api/nn/nn-c288c895ea92.nnue
+curl -L -O https://tests.stockfishchess.org/api/nn/nn-37f18f62d772.nnue
 ```
 
-**Linux**
+`make build` needs `g++` 12 or newer and GNU make. The default target is AVX2. `make build ARCH=x86-64-avxvnni` is the faster build on recent Intel and AMD CPUs. The binary is `./Hypersion`. Put both `.nnue` files in that same directory. Termchess passes those paths as `EvalFile` and `EvalFileSmall`, so you do not have to start the game from that directory.
+
+Without the networks Hypersion still runs, on its classical evaluator, and plays much weaker than the rating you picked.
 
 ```sh
-# Debian / Ubuntu (the binary lands in /usr/games, which Termchess searches)
-sudo apt install stockfish
-
-# Fedora
-sudo dnf install stockfish
+termchess --engine /path/to/Hypersion
 ```
 
-**Windows**
+On Windows the same two files sit beside `Hypersion.exe`. Download them with:
 
-Download a build from [stockfishchess.org](https://stockfishchess.org/download/) and either add it to `PATH` or start the game with:
-
-```sh
-termchess --stockfish "C:\Program Files\Stockfish\stockfish.exe"
+```powershell
+Invoke-WebRequest -Uri "https://tests.stockfishchess.org/api/nn/nn-c288c895ea92.nnue" -OutFile "nn-c288c895ea92.nnue"
+Invoke-WebRequest -Uri "https://tests.stockfishchess.org/api/nn/nn-37f18f62d772.nnue" -OutFile "nn-37f18f62d772.nnue"
 ```
 
 ## Play
@@ -54,16 +58,16 @@ termchess --stockfish "C:\Program Files\Stockfish\stockfish.exe"
 The start menu is a form:
 
 1. **Local two-player** — pass-and-play, with an option to flip the board each turn.
-2. **Play vs computer** — choose White, Black, or random, and an engine rating from 500 to 2500. The list has 52 steps. Arrow keys or `j`/`k` move one step, `Ctrl+U` / `Ctrl+D` page, and `/` filters (type `1650` to jump). The clock and the status line show `Stockfish (1650)`. That rating is saved with the rest of the setup and written into the PGN (`Elo`, plus `WhiteElo` or `BlackElo`).
+2. **Play vs computer** — choose White, Black, or random, and an engine rating from 500 to 2500. The list has 52 steps. Arrow keys or `j`/`k` move one step, `Ctrl+U` / `Ctrl+D` page, and `/` filters (type `1650` to jump). The clock and the status line show `Hypersion (1650)`. That rating is saved with the rest of the setup and written into the PGN (`Elo`, plus `WhiteElo` or `BlackElo`).
 3. **Load a saved game** — resume a PGN from the games folder.
 
 Every new game asks for a time control: none, bullet 1+0, blitz 3+2 or 5+0, rapid 10+0 or 15+10, or custom minutes plus increment. The active clock is highlighted and ticks. A flag is a loss, or a draw when the opponent has no mating material.
 
-Moves are shown on a separate, fixed cadence so a human move and a Stockfish reply land with the same rhythm. The gap is `movePaceMs` in `config.json` (default 400, `0` shows a move the moment it is ready, maximum 5000). The first move of a game is drawn on the next beat. After that, a move waits until the gap has elapsed since the previous one was drawn, and a queued pre-move waits one more beat instead of appearing in the same frame. A player who has already thought longer than the gap sees no extra lag. The chess clock is not this cadence: it keeps ticking every 100ms during the hold, and the increment is applied when the move is actually played.
+Moves are shown on a separate, fixed cadence so a human move and a Hypersion reply land with the same rhythm. The gap is `movePaceMs` in `config.json` (default 400, `0` shows a move the moment it is ready, maximum 5000). The first move of a game is drawn on the next beat. After that, a move waits until the gap has elapsed since the previous one was drawn, and a queued pre-move waits one more beat instead of appearing in the same frame. A player who has already thought longer than the gap sees no extra lag. The chess clock is not this cadence: it keeps ticking every 100ms during the hold, and the increment is applied when the move is actually played.
 
-The cursor stops at the edge of the board. Movement is screen-relative, so after a flip, Up still moves toward the top of the screen. After you confirm a move it sits on that move's destination. Stockfish's reply leaves it on the square where you left it, and so do a pre-move when it plays and undo. In a two-player game the side that moves first keeps the cursor: after the other side plays, it returns to the square that first side left, rather than staying on the reply. It is only brought back onto the board if it has left the board.
+The cursor stops at the edge of the board. Movement is screen-relative, so after a flip, Up still moves toward the top of the screen. After you confirm a move it sits on that move's destination. Hypersion's reply leaves it on the square where you left it, and so do a pre-move when it plays and undo. In a two-player game the side that moves first keeps the cursor: after the other side plays, it returns to the square that first side left, rather than staying on the reply. It is only brought back onto the board if it has left the board.
 
-While Stockfish is thinking the board is locked, and the status line shows `thinking…`. You may queue one pre-move. It is played if it is still legal, otherwise it is cleared.
+While Hypersion is thinking the board is locked, and the status line shows `thinking…`. You may queue one pre-move. It is played if it is still legal, otherwise it is cleared.
 
 Promotion opens an overlay (`Q R B N`). Left and Right change the piece, Enter confirms, Esc cancels the move and keeps the selection.
 
@@ -146,11 +150,11 @@ The picker is exactly these 52 ratings:
 | 1050, 1100, …, 1700 | 50 |
 | 1725, 1750, …, 2500 | 25 |
 
-On the first search the engine's `uci` handshake is read. If it advertises `UCI_LimitStrength` and `UCI_Elo`, the minimum and maximum come from that option (Stockfish 16 reports 1320–3190; older builds differ). Nothing in the mapping hardcodes those numbers.
+On the first search the engine's `uci` handshake is read. If it advertises `UCI_LimitStrength` and `UCI_Elo`, the minimum and maximum come from that option. Hypersion reports 500–3300, so every rating on this ladder is inside the range. Nothing in the mapping hardcodes those numbers.
 
-- A rating inside the engine's range sets `UCI_LimitStrength` and `UCI_Elo` to that rating. Think time grows from 400ms toward 2s as the rating rises, then the clock trims it.
+- A rating inside the engine's range sets `UCI_LimitStrength` and `UCI_Elo` to that rating. When the reported range covers 500 through 2500, that is the whole ladder: no Skill Level, depth, or node cap. Think time grows from 400ms toward 2s as the rating rises, then the clock trims it.
 - A rating above the engine maximum still uses `UCI_Elo`, clamped to the maximum. Think time keeps growing with the requested rating.
-- A rating below the minimum is not sent as `UCI_Elo`. The engine would clamp every one of those to the floor and they would play the same. Skill Level stays at 0, because a higher skill searched deeply can play above the floor. Depth (1–6), nodes (8–800), and movetime (40–500ms) rise with the rating. The chance of a random legal move falls from 85% at the bottom of the band to 0% at the step just under the floor.
+- A rating below the minimum is not sent as `UCI_Elo`. The engine would clamp every one of those to the floor and they would play the same. Skill Level stays at 0, because a higher skill searched deeply can play above the floor. Depth (1–6), nodes (8–800), and movetime (40–500ms) rise with the rating. The chance of a random legal move falls from 85% at the bottom of the band to 0% at the step just under the floor. Hypersion's minimum is 500, so this band is empty for it.
 - If the engine has no `UCI_Elo` range, the whole ladder uses that shape and Skill Level also rises from 0 to 20, with a longer search at the top.
 
 Each step is strictly stronger than the one below it. The code for this lives in `internal/engine/elo.go`.
@@ -158,11 +162,11 @@ Each step is strictly stronger than the one below it. The code for this lives in
 ## Layout
 
 ```
-cmd/termchess          program entry, --stockfish, --color, log file
+cmd/termchess          program entry, --engine, --color, log file
 internal/coord         screen-relative cursor, stops at the edge
 internal/game          rules wrapper, PGN, undo, draws, flag fall
 internal/interact      board state machine
-internal/engine        Stockfish UCI adapter and a scripted mock
+internal/engine        Hypersion UCI adapter and a scripted mock
 internal/clock         two Bubbles timers, increment, flag
 internal/theme         four palettes
 internal/config        persisted settings

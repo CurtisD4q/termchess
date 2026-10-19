@@ -14,7 +14,7 @@ import (
 // Prepared is everything main derives from flags, the environment, and config
 // before it builds the model. Graphics is off unless --graphics was passed.
 type Prepared struct {
-	Stockfish string
+	Engine    string
 	ColorMode ColorMode
 	Profile   colorprofile.Profile
 	Colorless bool
@@ -31,7 +31,7 @@ type Prepared struct {
 func Prepare(args []string, env []string, cfg config.Config) (Prepared, error) {
 	fs := flag.NewFlagSet("termchess", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	sf := fs.String("stockfish", "", "path to the Stockfish binary (default: search PATH)")
+	enginePath := fs.String("engine", "", "path to the Hypersion binary (default: search PATH)")
 	colorFlag := fs.String("color", "auto", "color mode: auto, truecolor, 256, 16, or none")
 	graphicsFlag := fs.String("graphics", "", "piece images stay off unless this is kitty, iterm, or sixel; off forces text")
 	blocksFlag := fs.String("blocks", "auto", "text pieces: auto, quadrant, sextant, or octant")
@@ -75,7 +75,7 @@ func Prepare(args []string, env []string, cfg config.Config) (Prepared, error) {
 	}
 
 	return Prepared{
-		Stockfish: *sf,
+		Engine:    *enginePath,
 		ColorMode: mode,
 		Profile:   profile,
 		Colorless: profile <= colorprofile.ASCII,

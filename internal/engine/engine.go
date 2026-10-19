@@ -1,4 +1,4 @@
-// Package engine talks to a UCI opponent. Stockfish is the real backend;
+// Package engine talks to a UCI opponent. Hypersion is the real backend;
 // tests use a scripted Engine. Ratings and the UCI_Elo mapping live in elo.go.
 package engine
 

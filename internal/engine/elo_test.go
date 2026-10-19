@@ -56,12 +56,16 @@ func TestEloLadder(t *testing.T) {
 	}
 }
 
-// sf16 is the shape Stockfish 16 reports (min 1320, max 3190). The production
-// code reads the live engine; the test feeds the same shape in.
-func sf16() Bounds { return Bounds{LimitStrength: true, EloMin: 1320, EloMax: 3190} }
+// narrowFloor is an engine whose UCI_Elo minimum sits above the bottom of the
+// ladder (the old Stockfish 16 shape: 1320–3190). The production code reads
+// the live engine; the test feeds the same shape in.
+func narrowFloor() Bounds { return Bounds{LimitStrength: true, EloMin: 1320, EloMax: 3190} }
+
+// hypersionBounds is what Hypersion reports: LimitStrength and UCI_Elo 500–3300.
+func hypersionBounds() Bounds { return Bounds{LimitStrength: true, EloMin: 500, EloMax: 3300} }
 
 func TestPlanMonotonicAndFallback(t *testing.T) {
-	bounds := sf16()
+	bounds := narrowFloor()
 	var prev Plan
 	for i, elo := range Elos() {
 		p := PlanFor(elo, bounds)
@@ -131,6 +135,30 @@ func TestPlanMonotonicAndFallback(t *testing.T) {
 	}
 }
 
+func TestPlanHypersionCoversLadder(t *testing.T) {
+	bounds := hypersionBounds()
+	if bounds.EloMin > 500 || bounds.EloMax < 2500 || !bounds.LimitStrength {
+		t.Fatalf("fixture does not cover the ladder: %+v", bounds)
+	}
+	var prev Plan
+	for i, elo := range Elos() {
+		p := PlanFor(elo, bounds)
+		if !p.UseElo || p.UCIElo != elo {
+			t.Fatalf("%d did not use UCI_Elo: %+v", elo, p)
+		}
+		if p.Skill != 0 || p.Depth != 0 || p.Nodes != 0 || p.RandomPermille != 0 {
+			t.Fatalf("%d still has a skill/depth fallback: %+v", elo, p)
+		}
+		if i > 0 && p.Strength() <= prev.Strength() {
+			t.Fatalf("strength fell at %d", elo)
+		}
+		prev = p
+	}
+	if OpponentName(1500) != "Hypersion (1500)" || OpponentName(1640) != "Hypersion (1650)" {
+		t.Fatalf("names %q %q", OpponentName(1500), OpponentName(1640))
+	}
+}
+
 func TestPlanClampsAboveEngineMax(t *testing.T) {
 	bounds := Bounds{LimitStrength: true, EloMin: 1320, EloMax: 2000}
 	top := PlanFor(2500, bounds)
@@ -190,7 +218,7 @@ func TestDiverge(t *testing.T) {
 }
 
 func TestUCIMoveTimeGrows(t *testing.T) {
-	bounds := sf16()
+	bounds := narrowFloor()
 	var prev time.Duration
 	for _, elo := range Elos() {
 		if elo < bounds.EloMin {

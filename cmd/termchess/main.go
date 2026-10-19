@@ -35,27 +35,27 @@ func main() {
 	logger.Info("blocks", "detail", prep.Blocks.String())
 	logger.Info("pieces", "style", prep.Pieces.String())
 
-	path, err := engine.Find(prep.Stockfish)
+	path, err := engine.Find(prep.Engine)
 	if err != nil {
-		logger.Info("stockfish unavailable", "err", err)
+		logger.Info("hypersion unavailable", "err", err)
 		path = ""
 	} else {
-		logger.Info("stockfish", "path", path)
+		logger.Info("hypersion", "path", path)
 	}
 
 	app := ui.New(ui.Options{
-		StockfishPath: path,
-		EngineOK:      path != "",
-		Config:        cfg,
-		ConfigPath:    config.ConfigPath(),
-		DataDir:       config.GamesDir(),
-		Logger:        logger,
-		ColorMode:     prep.ColorMode,
-		Colorless:     prep.Colorless,
-		Graphics:      prep.Graphics,
-		Blocks:        prep.Blocks,
-		Pieces:        prep.Pieces,
-		Profile:       prep.Profile,
+		EnginePath: path,
+		EngineOK:   path != "",
+		Config:     cfg,
+		ConfigPath: config.ConfigPath(),
+		DataDir:    config.GamesDir(),
+		Logger:     logger,
+		ColorMode:  prep.ColorMode,
+		Colorless:  prep.Colorless,
+		Graphics:   prep.Graphics,
+		Blocks:     prep.Blocks,
+		Pieces:     prep.Pieces,
+		Profile:    prep.Profile,
 	})
 	if prep.DebugDump {
 		w, h := 140, 64

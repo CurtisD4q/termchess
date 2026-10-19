@@ -142,7 +142,7 @@ func (a *App) commit(mv *chess.Move) (tea.Model, tea.Cmd) {
 // of appearing in the same frame as the engine move.
 //
 // committed is a move the player just confirmed. The cursor then sits on that
-// destination. Stockfish's reply, the other side in a two-player game when the
+// destination. Hypersion's reply, the other side in a two-player game when the
 // move was not confirmed from the cursor, a pre-move as it plays, and undo do
 // not move it.
 func (a *App) applyPlayed(mv *chess.Move, premove, committed bool) (tea.Model, tea.Cmd) {
@@ -236,7 +236,7 @@ func (a *App) clampCursor() {
 
 // enqueue holds a move until the pace beat. The first move of a game is due
 // immediately. Later moves wait until movePace has passed since the previous
-// one was shown, so a fast Stockfish reply does not snap onto the board.
+// one was shown, so a fast Hypersion reply does not snap onto the board.
 func (a *App) enqueue(mv *chess.Move, premove, committed bool) {
 	when := time.Now()
 	if a.pace > 0 && !a.lastApply.IsZero() {
@@ -322,7 +322,7 @@ func (a *App) onDraw() (tea.Model, tea.Cmd) {
 		return a.ask(confirmDrawClaim, title)
 	}
 	if a.session.Mode() == game.ModeComputer {
-		a.setToast("Stockfish declines the draw")
+		a.setToast("Hypersion declines the draw")
 		return a, nil
 	}
 	if offer := a.session.DrawOffer(); offer != chess.NoColor {

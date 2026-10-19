@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -16,26 +17,38 @@ import (
 	"github.com/notnil/chess/uci"
 )
 
-// Find locates a Stockfish binary. An explicit path wins. Otherwise PATH is
-// searched, then a few well-known install locations (Homebrew, Debian's
-// /usr/games, Windows default).
+// Networks Hypersion loads from its working directory. They are not in the
+// Hypersion git tree. When both files sit next to the binary, the process is
+// pointed at those absolute paths so the search does not depend on the
+// directory termchess was started from.
+const (
+	bigNetwork   = "nn-c288c895ea92.nnue"
+	smallNetwork = "nn-37f18f62d772.nnue"
+)
+
+// Find locates a Hypersion binary. An explicit path wins. Otherwise PATH is
+// searched for hypersion and Hypersion, then a few well-known install locations.
 func Find(explicit string) (string, error) {
 	if explicit != "" {
 		st, err := os.Stat(explicit)
 		if err != nil || st.IsDir() {
-			return "", fmt.Errorf("stockfish not found at %s", explicit)
+			return "", fmt.Errorf("engine not found at %s", explicit)
 		}
 		return explicit, nil
 	}
-	if p, err := exec.LookPath("stockfish"); err == nil {
-		return p, nil
+	for _, name := range []string{"hypersion", "Hypersion"} {
+		if p, err := exec.LookPath(name); err == nil {
+			return p, nil
+		}
 	}
 	candidates := []string{
-		"/usr/games/stockfish",
-		"/usr/bin/stockfish",
-		"/usr/local/bin/stockfish",
-		"/opt/homebrew/bin/stockfish",
-		`C:\Program Files\Stockfish\stockfish.exe`,
+		"/usr/local/bin/hypersion",
+		"/usr/local/bin/Hypersion",
+		"/usr/bin/hypersion",
+		"/usr/bin/Hypersion",
+		"/opt/homebrew/bin/hypersion",
+		"/opt/homebrew/bin/Hypersion",
+		`C:\Program Files\Hypersion\Hypersion.exe`,
 	}
 	for _, c := range candidates {
 		st, err := os.Stat(c)
@@ -43,11 +56,11 @@ func Find(explicit string) (string, error) {
 			return c, nil
 		}
 	}
-	return "", errors.New("stockfish not found on PATH")
+	return "", errors.New("hypersion not found on PATH")
 }
 
-// Stockfish is a UCI engine process.
-type Stockfish struct {
+// Process is a UCI engine process. The vs-computer opponent is Hypersion.
+type Process struct {
 	path   string
 	eng    *uci.Engine
 	bounds Bounds
@@ -55,18 +68,18 @@ type Stockfish struct {
 	mu     sync.Mutex
 }
 
-// NewStockfish returns an engine that starts the process on the first search.
-func NewStockfish(path string) (*Stockfish, error) {
+// New returns an engine that starts the process on the first search.
+func New(path string) (*Process, error) {
 	if path == "" {
-		return nil, errors.New("stockfish path is empty")
+		return nil, errors.New("engine path is empty")
 	}
-	return &Stockfish{
+	return &Process{
 		path: path,
 		rng:  rand.New(rand.NewPCG(uint64(time.Now().UnixNano()), 0x9e3779b97f4a7c15)),
 	}, nil
 }
 
-func (s *Stockfish) ensure() error {
+func (s *Process) ensure() error {
 	if s.eng != nil {
 		return nil
 	}
@@ -74,17 +87,54 @@ func (s *Stockfish) ensure() error {
 	if err != nil {
 		return err
 	}
-	if err := eng.Run(uci.CmdUCI, uci.CmdIsReady, uci.CmdUCINewGame); err != nil {
+	if err := eng.Run(uci.CmdUCI); err != nil {
 		_ = eng.Close()
 		return err
 	}
 	s.eng = eng
 	s.bounds = boundsFrom(eng.Options())
+	if err := s.pinNetworks(); err != nil {
+		_ = eng.Close()
+		s.eng = nil
+		return err
+	}
+	if err := eng.Run(uci.CmdIsReady, uci.CmdUCINewGame); err != nil {
+		_ = eng.Close()
+		s.eng = nil
+		return err
+	}
 	return nil
 }
 
+// pinNetworks points EvalFile options at the networks beside the binary.
+// Missing files are left alone: Hypersion then uses its classical evaluator.
+func (s *Process) pinNetworks() error {
+	dir := filepath.Dir(s.path)
+	var cmds []uci.Cmd
+	opts := s.eng.Options()
+	if _, ok := opts["EvalFile"]; ok {
+		if p := filepath.Join(dir, bigNetwork); fileExists(p) {
+			cmds = append(cmds, uci.CmdSetOption{Name: "EvalFile", Value: p})
+		}
+	}
+	if _, ok := opts["EvalFileSmall"]; ok {
+		if p := filepath.Join(dir, smallNetwork); fileExists(p) {
+			cmds = append(cmds, uci.CmdSetOption{Name: "EvalFileSmall", Value: p})
+		}
+	}
+	if len(cmds) == 0 {
+		return nil
+	}
+	return s.eng.Run(cmds...)
+}
+
+func fileExists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && !st.IsDir()
+}
+
 // Bounds starts the engine if needed and returns the UCI_Elo range it reported.
-func (s *Stockfish) Bounds() (Bounds, error) {
+func (s *Process) Bounds() (Bounds, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.ensure(); err != nil {
@@ -115,7 +165,7 @@ func boundsFrom(opts map[string]uci.Option) Bounds {
 // BestMove runs one search. It blocks the calling goroutine, which must not
 // be the Bubble Tea update loop. The rating is turned into a Plan using the
 // UCI_Elo min/max this process reported.
-func (s *Stockfish) BestMove(ctx context.Context, req Request) (*chess.Move, error) {
+func (s *Process) BestMove(ctx context.Context, req Request) (*chess.Move, error) {
 	type result struct {
 		mv  *chess.Move
 		err error
@@ -167,15 +217,16 @@ func (s *Stockfish) BestMove(ctx context.Context, req Request) (*chess.Move, err
 			return nil, r.err
 		}
 		if r.mv == nil {
-			return nil, errors.New("stockfish returned no move")
+			return nil, errors.New("engine returned no move")
 		}
 		return r.mv, nil
 	}
 }
 
 // apply pushes the plan's UCI options. LimitStrength is only sent when the
-// engine advertised it, so an engine without UCI_Elo still receives Skill Level.
-func (s *Stockfish) apply(plan Plan) error {
+// engine advertised it. The UCI_Elo path is preferred whenever the plan
+// selected it. Skill Level is the fallback for an engine with no usable range.
+func (s *Process) apply(plan Plan) error {
 	if plan.UseElo {
 		return s.eng.Run(
 			uci.CmdSetOption{Name: "UCI_LimitStrength", Value: "true"},
@@ -191,7 +242,7 @@ func (s *Stockfish) apply(plan Plan) error {
 }
 
 // Close stops the engine process.
-func (s *Stockfish) Close() error {
+func (s *Process) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.eng == nil {

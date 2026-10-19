@@ -48,9 +48,9 @@ func Nearest(elo int) int {
 // DefaultElo is the rating selected for a new config.
 const DefaultElo = 1500
 
-// OpponentName is the clock label and PGN player name, e.g. "Stockfish (1650)".
+// OpponentName is the clock label and PGN player name, e.g. "Hypersion (1650)".
 func OpponentName(elo int) string {
-	return "Stockfish (" + itoa(Nearest(elo)) + ")"
+	return "Hypersion (" + itoa(Nearest(elo)) + ")"
 }
 
 // Bounds is the UCI_Elo range reported by an engine at runtime.
@@ -63,8 +63,8 @@ type Bounds struct {
 }
 
 // EloSupported reports whether UCI_LimitStrength and a real UCI_Elo range
-// are both available. The numbers come from the engine; nothing here is a
-// hardcoded Stockfish version.
+// are both available. The numbers come from the engine. Hypersion reports
+// 500–3300, which covers this ladder.
 func (b Bounds) EloSupported() bool {
 	return b.LimitStrength && b.EloMin > 0 && b.EloMax >= b.EloMin
 }
@@ -76,9 +76,11 @@ func (b Bounds) EloSupported() bool {
 //   - Snap the requested rating onto Elos().
 //
 //   - If the engine supports UCI_Elo and the rating is inside [EloMin, EloMax],
-//     set UCI_LimitStrength and UCI_Elo to that rating. Movetime grows with
-//     the rating, from 400ms at 500 up to SearchCeiling at 2500, and is then
-//     capped by the clock. Depth and nodes are left unlimited.
+//     set UCI_LimitStrength and UCI_Elo to that rating. When EloMin is at most
+//     500 and EloMax is at least 2500, that is every step of this ladder:
+//     no Skill Level, depth, nodes, or random-move fallback. Movetime grows
+//     with the rating, from 400ms at 500 up to SearchCeiling at 2500, and is
+//     then capped by the clock. Depth and nodes are left unlimited.
 //
 //   - Ratings above EloMax still use UCI_Elo, clamped to EloMax. Movetime
 //     keeps growing with the requested rating so the ladder does not flatten.
